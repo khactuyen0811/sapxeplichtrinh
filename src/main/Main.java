@@ -27,7 +27,7 @@ public class Main {
     static int[] priority = new int[MAX];
     static String[] category = new String[MAX];
     static String[] description = new String[MAX];
-    static String[] status = new String[MAX];
+    static boolean[] canceled = new boolean[MAX];
     static int[] duration = new int[MAX];  
     static String[] email = new String[MAX];
     static String[] partner = new String[MAX];
@@ -81,6 +81,18 @@ public class Main {
         } while (choice != 0);
     }
 
+    static void rebuildQueue() {
+        front = 0;          
+        rear = -1;          
+        queueSize = 0;      
+        for (int i = 0; i < count; i++) {
+            if (!canceled[i] && getCurrentStatus(i).equals("pending")) {
+                rear = (rear + 1) % MAX;   
+                queue[rear] = i;           
+                queueSize++;
+            }
+        }
+    }
 
     // hàm chuẩn hóa
     static boolean isLeapYear(int year) {
@@ -123,6 +135,21 @@ public class Main {
         }
     }
 
+    static long nowMinutes() {
+        LocalDateTime now = LocalDateTime.now();
+        return toMinutes(now.getDayOfMonth(), now.getMonthValue(), now.getYear(),
+                        now.getHour(), now.getMinute());
+    }
+
+    
+    static String getCurrentStatus(int idx) {
+        if (canceled[idx]) return "canceled";
+        long now = nowMinutes();
+        long start = toMinutes(day[idx], month[idx], year[idx], hour[idx], minute[idx]);
+        long end = start + duration[idx];
+        return (end <= now) ? "done" : "pending";
+    }
+
     static void log(String msg) {
         try (FileWriter fw = new FileWriter(LOG_FILE, true);
             PrintWriter pw = new PrintWriter(fw)) {
@@ -144,6 +171,21 @@ public class Main {
         total = total * 24 + h;
         total = total * 60 + min;
         return total;
+    }
+
+    static void displayQueue() {
+        if (queueSize == 0) {
+            System.out.println("Hang doi trong.");
+            return;
+        }
+        System.out.println("Danh sach cong viec cho xu ly (FIFO):");
+        int i = front;
+        for (int k = 0; k < queueSize; k++) {
+            int idx = queue[i % MAX];
+            String shortDesc = description[idx].length() > 20 ? description[idx].substring(0, 20) + "..." : description[idx];
+            System.out.printf("- %s : %s\n", id[idx], shortDesc);
+            i++;
+        }
     }
 
     static void countdownToTask() {
@@ -200,13 +242,12 @@ public class Main {
 
     static void saveToFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(DATA_FILE))) {
-            // Header
             pw.printf("%-8s %-4s %-4s %-6s %-4s %-4s %-4s %-12s %-20s %-10s %-6s %-20s %-15s %-15s %-15s %-12s%n",
-                    "ID", "Ngay", "Thang", "Nam", "Gio", "Phut", "UT", "PhanLoai", "MoTa", "TrangThai", "TGian", "Email", "DoiTac", "DiaDiem", "LoaiHop", "DoanhThu");
+                    "ID", "Ngay", "Thang", "Nam", "Gio", "Phut", "UT", "PhanLoai", "MoTa", "Huy", "TGian", "Email", "DoiTac", "DiaDiem", "LoaiHop", "DoanhThu");
             for (int i = 0; i < count; i++) {
                 pw.printf("%-8s %-4d %-4d %-6d %-4d %-4d %-4d %-12s %-20s %-10s %-6d %-20s %-15s %-15s %-15s %-12.2f%n",
                         id[i], day[i], month[i], year[i], hour[i], minute[i],
-                        priority[i], category[i], description[i], status[i], duration[i],
+                        priority[i], category[i], description[i], (canceled[i] ? "1" : "0"), duration[i],
                         email[i], partner[i], location[i], meetingType[i], revenue[i]);
             }
             log("Da luu " + count + " cong viec vao file (dang bang).");
@@ -231,10 +272,9 @@ public class Main {
                     int end = Math.min(pos + W[i], line.length());
                     p[i] = line.substring(pos, end).trim();
                     pos = end;
-                    // bỏ qua khoảng trắng phân cách (1 space)
                     if (pos < line.length() && line.charAt(pos) == ' ') pos++;
                 }
-                if (p[0] == null) continue;
+                if (p[0] == null || p[0].isEmpty()) continue;
                 try {
                     id[count] = p[0];
                     day[count] = Integer.parseInt(p[1]);
@@ -245,25 +285,23 @@ public class Main {
                     priority[count] = Integer.parseInt(p[6]);
                     category[count] = p[7];
                     description[count] = p[8];
-                    status[count] = p[9];
+                    int huy = Integer.parseInt(p[9]);
+                    canceled[count] = (huy == 1);
                     duration[count] = Integer.parseInt(p[10]);
                     email[count] = p[11];
                     partner[count] = p[12];
                     location[count] = p[13];
                     meetingType[count] = p[14];
                     revenue[count] = Double.parseDouble(p[15]);
+                    count++;
                 } catch (Exception e) {
-                    continue;
+                    System.err.println("Loi phan tich dong: " + line);
                 }
-                if (status[count].equals("pending")) {
-                    rear = (rear + 1) % MAX;
-                    queue[rear] = count;
-                    queueSize++;
-                }
-                count++;
             }
+            rebuildQueue();
             log("Da doc " + count + " cong viec tu file (dang bang).");
-        } catch (Exception e) {
+            System.out.println("Da doc " + count + " cong viec.");
+        } catch (IOException e) {
             System.err.println("Loi doc file: " + e.getMessage());
         }
     }
@@ -315,18 +353,9 @@ public class Main {
         System.out.print("Mo ta: ");
         description[count] = sc.nextLine();
 
-        String st;
-        System.out.println("Chon trang thai:");
-        System.out.println("1. pending");
-        System.out.println("2. done");
-        System.out.println("3. canceled");
-        int choiceStatus = readInt("Nhap so (1-3): ");
-        switch (choiceStatus) {
-            case 1: st = "pending"; break;
-            case 2: st = "done"; break;
-            case 3: st = "canceled"; break;
-            default: st = "pending"; break;
-        }
+        System.out.print("Huy cong viec ngay? (y/n): ");
+        boolean isCanceled = sc.nextLine().equalsIgnoreCase("y");
+        canceled[count] = isCanceled;
 
         int dur = readInt("Thoi gian thuc hien (phut): ");
         while (dur <= 0) {
@@ -340,8 +369,19 @@ public class Main {
         partner[count] = sc.nextLine();
         System.out.print("Dia diem: ");
         location[count] = sc.nextLine();
-        System.out.print("Loai hinh hop (work/study/meeting/conference): ");
-        meetingType[count] = sc.nextLine();
+        
+        System.out.print("Loai hinh hop: ");
+        System.out.println("1. work");
+        System.out.println("2. study");
+        System.out.println("3. meeting");
+        System.out.println("4. conference");
+        int choiceType = readInt("Nhap so (1-4): ");
+        switch (choiceType){
+            case 1: meetingType[count] = "work"; break;
+            case 2: meetingType[count] = "study"; break;
+            case 3: meetingType[count] = "meeting"; break;
+            case 4: meetingType[count] = "conference"; break;
+        }
         revenue[count] = readDouble("Doanh thu (VND): ");
 
         // Kiem tra conflict
@@ -365,14 +405,8 @@ public class Main {
             }
         }
 
-        // Them vao queue neu trang thai pending
-        if (st.equals("pending")) {
-            rear = (rear + 1) % MAX;
-            queue[rear] = count;
-            queueSize++;
-        }
-
         count++;
+        rebuildQueue(); 
         System.out.println("Them thanh cong.");
         log("Them cong viec ID " + newId);
     }
@@ -397,7 +431,7 @@ public class Main {
         System.out.println("Do uu tien: " + priority[idx]);
         System.out.println("Phan loai: " + category[idx]);
         System.out.println("Mo ta: " + description[idx]);
-        System.out.println("Trang thai: " + status[idx]);
+        System.out.println("Trang thai: " + getCurrentStatus(idx));
         System.out.println("Thoi luong: " + duration[idx] + " phut");
         System.out.println("Email: " + email[idx]);
         System.out.println("Doi tac: " + partner[idx]);
@@ -434,27 +468,6 @@ public class Main {
             return;
         }
 
-        // Xoa khoi queue
-
-        int newRear = rear;
-        for (int i = front; i <= rear; i++) {
-            if (queue[i % MAX] == idx) {
-                // dich trai queue
-                for (int j = i; j < rear; j++) {
-                    queue[j % MAX] = queue[(j+1) % MAX];
-                }
-                newRear--;
-                queueSize--;
-                break;
-            }
-        }
-        rear = newRear;
-        if (queueSize == 0) {
-            front = 0;
-            rear = -1;
-        }
-
-        // Xoa khoi mang chinh
         for (int i = idx; i < count - 1; i++) {
             id[i] = id[i+1];
             day[i] = day[i+1]; month[i] = month[i+1]; year[i] = year[i+1];
@@ -462,7 +475,7 @@ public class Main {
             priority[i] = priority[i+1];
             category[i] = category[i+1];
             description[i] = description[i+1];
-            status[i] = status[i+1];
+            canceled[i] = canceled[i+1];
             duration[i] = duration[i+1];
             email[i] = email[i+1];
             partner[i] = partner[i+1];
@@ -471,6 +484,7 @@ public class Main {
             revenue[i] = revenue[i+1];
         }
         count--;
+        rebuildQueue(); 
         System.out.println("Xoa thanh cong.");
         log("Xoa cong viec ID " + delId);
     }
@@ -493,6 +507,8 @@ public class Main {
     static void swap(int i, int j) {
         String tmp;
         int t;
+        boolean tmpBool;  
+
         tmp = id[i]; id[i] = id[j]; id[j] = tmp;
         t = day[i]; day[i] = day[j]; day[j] = t;
         t = month[i]; month[i] = month[j]; month[j] = t;
@@ -502,7 +518,7 @@ public class Main {
         t = priority[i]; priority[i] = priority[j]; priority[j] = t;
         tmp = category[i]; category[i] = category[j]; category[j] = tmp;
         tmp = description[i]; description[i] = description[j]; description[j] = tmp;
-        tmp = status[i]; status[i] = status[j]; status[j] = tmp;
+        tmpBool = canceled[i]; canceled[i] = canceled[j]; canceled[j] = tmpBool;   
         t = duration[i]; duration[i] = duration[j]; duration[j] = t;
         tmp = email[i]; email[i] = email[j]; email[j] = tmp;
         tmp = partner[i]; partner[i] = partner[j]; partner[j] = tmp;
@@ -568,8 +584,25 @@ public class Main {
         if (!newPartner.isEmpty()) partner[idx] = newPartner;
         String newLocation = readString("Dia diem moi: ");
         if (!newLocation.isEmpty()) location[idx] = newLocation;
-        String newMeetingType = readString("Loai hinh hop moi: ");
-        if (!newMeetingType.isEmpty()) meetingType[idx] = newMeetingType;
+        
+        System.out.print("Loai hinh moi: ");
+        System.out.println("1. work");
+        System.out.println("2. study");
+        System.out.println("3. meeting");
+        System.out.println("4. conference");
+        int choiceType;
+        do {
+            choiceType = readInt("nhap so (1-4): ");
+            if (choiceType < 1 || choiceType > 4)
+                System.out.println("vui long nhap lai (1-4)");
+        } while (choiceType < 1 || choiceType > 4);
+        switch(choiceType){
+            case 1: meetingType[idx] = "work"; break;
+            case 2: meetingType[idx] = "study"; break;
+            case 3: meetingType[idx] = "meeting"; break;
+            case 4: meetingType[idx] = "conference"; break;
+        }
+    
         String revStr = readString("Doanh thu moi: ");
         if (!revStr.isEmpty()) {
             double rev = Double.parseDouble(revStr);
@@ -586,44 +619,10 @@ public class Main {
         String cat = readString("Phan loai moi: ");
         if (!cat.isEmpty()) category[idx] = cat;
 
-        System.out.println("Chon trang thai moi:");
-        System.out.println("1. pending");
-        System.out.println("2. done");
-        System.out.println("3. canceled");
-        System.out.println("0. bo qua (giu nguyen)");
-        int chonSt = readInt("Nhap so: ");
-        String st = "";
-        switch (chonSt) {
-            case 1: st = "pending"; break;
-            case 2: st = "done"; break;
-            case 3: st = "canceled"; break;
-            default: st = "";
-        }
-        if (!st.isEmpty()) {
-            // Cap nhat queue neu trang thai thay doi
-            if (status[idx].equals("pending") && !st.equals("pending")) {
-                // xoa khoi queue
-                for (int i = front; i <= rear; i++) {
-                    if (queue[i % MAX] == idx) {
-                        for (int j = i; j < rear; j++) {
-                            queue[j % MAX] = queue[(j + 1) % MAX];
-                        }
-                        rear--;
-                        queueSize--;
-                        break;
-                    }
-                }
-                if (queueSize == 0) {
-                    front = 0;
-                    rear = -1;
-                }
-            } else if (!status[idx].equals("pending") && st.equals("pending")) {
-                // them vao queue
-                rear = (rear + 1) % MAX;
-                queue[rear] = idx;
-                queueSize++;
-            }
-            status[idx] = st;
+        System.out.print("Huy cong viec? (y/n, hien tai: " + (canceled[idx] ? "da huy" : "chua huy") + "): ");
+        String cancelChoice = sc.nextLine();
+        if (!cancelChoice.isEmpty()) {
+            canceled[idx] = cancelChoice.equalsIgnoreCase("y");
         }
 
         String durStr = readString("Thoi gian thuc hien moi (phut): ");
@@ -673,6 +672,7 @@ public class Main {
                 System.out.println("Sai dinh dang, giu nguyen.");
             }
         }
+        rebuildQueue(); 
         System.out.println("Cap nhat thanh cong.");
         log("Cap nhat cong viec ID " + updId);
     }
@@ -728,9 +728,9 @@ public class Main {
                 break;
             case 3:
                 System.out.print("Trang thai (pending/done/canceled): ");
-                String st = sc.nextLine();
+                String stFilter = sc.nextLine();
                 for (int i = 0; i < count; i++) {
-                    if (status[i].equals(st)) printEvent(i);
+                    if (getCurrentStatus(i).equals(stFilter)) printEvent(i);
                 }
                 break;
             default:
@@ -744,36 +744,31 @@ public class Main {
             return;
         }
         int idx = queue[front];
+        if (canceled[idx] || !getCurrentStatus(idx).equals("pending")) {
+            front = (front + 1) % MAX;
+            queueSize--;
+            System.out.println("Cong viec " + id[idx] + " khong con pending, bo qua.");
+            processNextTask(); 
+            return;
+        }
+        
         front = (front + 1) % MAX;
         queueSize--;
         System.out.println("Dang xu ly cong viec:");
         printEvent(idx);
-        System.out.print("Danh dau la done? (y/n): ");
+        System.out.print("Danh dau la da hoan thanh? (y/n): ");
         if (sc.nextLine().equalsIgnoreCase("y")) {
-            status[idx] = "done";
-            System.out.println("Da cap nhat trang thai done.");
-            log("Da xu ly xong cong viec ID " + id[idx]);
+            System.out.println("Da hoan thanh (auto done se duoc ap dung sau khi qua thoi gian).");
+            log("Da xu ly xong cong viec ID " + id[idx] + " (nguoi dung xac nhan)");
         } else {
-            // dua lai vao cuoi queue
-            rear = (rear + 1) % MAX;
-            queue[rear] = idx;
-            queueSize++;
-            System.out.println("Chua xu ly, dua ve cuoi hang doi.");
-        }
-    }
-
-    static void displayQueue() {
-        if (queueSize == 0) {
-            System.out.println("Hang doi trong.");
-            return;
-        }
-        System.out.println("Danh sach cong viec cho xu ly (FIFO):");
-        int i = front;
-        for (int k = 0; k < queueSize; k++) {
-            int idx = queue[i % MAX];
-            String shortDesc = description[idx].length() > 20 ? description[idx].substring(0, 20) + "..." : description[idx];
-            System.out.printf("- %s : %s\n", id[idx], shortDesc);
-            i++;
+            if (!canceled[idx] && getCurrentStatus(idx).equals("pending")) {
+                rear = (rear + 1) % MAX;
+                queue[rear] = idx;
+                queueSize++;
+                System.out.println("Chua xu ly, dua ve cuoi hang doi.");
+            } else {
+                System.out.println("Cong viec khong con pending, khong dua lai.");
+            }
         }
     }
 
