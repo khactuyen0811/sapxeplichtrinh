@@ -1,4 +1,6 @@
-ID       Ngay Thang Nam    Gio  Phut UT   PhanLoai     MoTa                 Huy        TGian  Email                DoiTac          DiaDiem         LoaiHop         DoanhThu    
-2        2    2    2      2    2    2    2            2                    0          112    121                                  1               work            1.00        
-3        1    2    2027   1    1    1    1            1                    0          1      1                    1               1               work            1.00        
-1        1    11   1      1    1    1    1            1                    0          1      1                    1               1               work            1.00        
+ID       Ngay Thang Nam    Gio  Phut TieuDe               MoTa                           Huy    TGian  UuTien Email                DoiTac          DiaDiem         LoaiHop         DoanhThu    
+2        2    2    2      2    2    2                    2                              0      2      2      2                    2               2               study           244.00      
+3        3    3    3      3    3    3                    3                              0      3      3      3                    3               3               meeting         3.00        
+4        28   5    2026   10   30   kk                   e                              0      100    3      e                    e               hn              work            244.00      
+5        30   5    2026   10   30   s                    s                              0      1000   3      kk                   j               hn              study           444.00      
+7        29   5    2027   10   30   a                    a                              0      100    2      d                    d               hn              study           244.00      
