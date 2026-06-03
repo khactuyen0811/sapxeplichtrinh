@@ -1,6 +1,8 @@
 package main;
 import event.ManagerFile;
 import event.ManagerTask;
+import event.MeetingTask;
+import event.StudyTask;
 import event.Task;
 import java.time.LocalDateTime;
 import java.util.Scanner;
@@ -138,7 +140,7 @@ public class Main {
     }
 
     private static void addEvent(long currentTime) {
-        if (manager.getCount() >= 200) { // Max_event = 200
+        if (manager.getCount() >= 200) {
             System.out.println("Day, khong them duoc.");
             return;
         }
@@ -199,8 +201,21 @@ public class Main {
         System.out.print("Huy cong viec ngay? (y/n): ");
         boolean isCanceled = sc.nextLine().equalsIgnoreCase("y");
 
-        Task newTask = new Task(newId, d, m, y, h, min, tille, dur, description,
-                isCanceled, location, prio, partner, email, meetingType, revenue);
+        Task newTask = null;
+        switch (meetingType) {
+            case "meeting":
+                newTask = new MeetingTask(newId, d, m, y, h, min, tille, dur, description,
+                        isCanceled, location, prio, partner, email, revenue);
+                break;
+            case "study":
+                newTask = new StudyTask(newId, d, m, y, h, min, tille, dur, description,
+                        isCanceled, location, prio, revenue);
+                break;
+            default: // work, conference,...
+                newTask = new Task(newId, d, m, y, h, min, tille, dur, description,
+                        isCanceled, location, prio, partner, email, meetingType, revenue);
+        }
+        
         if (manager.addTask(newTask, currentTime)) {
             System.out.println("Them thanh cong.");
             ManagerFile.log("Them cong viec ID " + newId);

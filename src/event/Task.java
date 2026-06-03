@@ -10,9 +10,9 @@ public class Task {
     private boolean canceled;
     private String location;
     private int priority;
-    private String partner;
-    private String email;
-    private String meetingType;
+    protected String partner;
+    protected String email;
+    protected String meetingType;
     private Double revenue;
 
     public Task(String id, int day, int month, int year, int hour, int minute, String tille, int duration,

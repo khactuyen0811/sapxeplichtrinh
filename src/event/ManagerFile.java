@@ -68,24 +68,65 @@ public class ManagerFile {
                 }
                 if (p[0].isEmpty()) continue;
                 try {
-                    Task task = new Task(
-                        p[0],                               // id
-                        Integer.parseInt(p[1]),             // day
-                        Integer.parseInt(p[2]),             // month
-                        Integer.parseInt(p[3]),             // year
-                        Integer.parseInt(p[4]),             // hour
-                        Integer.parseInt(p[5]),             // minute
-                        p[6],                               // title
-                        Integer.parseInt(p[9]),             // duration (cột TGian)
-                        p[7],                               // description (cột MoTa)
-                        (Integer.parseInt(p[8]) == 1),      // canceled (cột Huy)
-                        p[13],                              // location (cột DiaDiem)
-                        Integer.parseInt(p[10]),            // priority (cột UuTien)
-                        p[12],                              // partner (cột DoiTac)
-                        p[11],                              // email (cột Email)
-                        p[14],                              // meetingType (cột LoaiHop)
-                        Double.parseDouble(p[15])           // revenue
-                    );
+
+                    String meetingType = p[14];
+                    Task task = null;
+
+                    if ("Meeting".equals(meetingType)) {
+                        task = new MeetingTask(
+                            p[0],                               // id
+                            Integer.parseInt(p[1]),             // day
+                            Integer.parseInt(p[2]),             // month
+                            Integer.parseInt(p[3]),             // year
+                            Integer.parseInt(p[4]),             // hour
+                            Integer.parseInt(p[5]),             // minute
+                            p[6],                               // title
+                            Integer.parseInt(p[9]),             // duration
+                            p[7],                               // description
+                            (Integer.parseInt(p[8]) == 1),      // canceled
+                            p[13],                              // location
+                            Integer.parseInt(p[10]),            // priority
+                            p[12],                              // partner
+                            p[11],                              // email
+                            Double.parseDouble(p[15])           // revenue
+                        );
+                    } else if ("Study".equals(meetingType)) {
+                        task = new StudyTask(
+                            p[0],                               // id
+                            Integer.parseInt(p[1]),             // day
+                            Integer.parseInt(p[2]),             // month
+                            Integer.parseInt(p[3]),             // year
+                            Integer.parseInt(p[4]),             // hour
+                            Integer.parseInt(p[5]),             // minute
+                            p[6],                               // title
+                            Integer.parseInt(p[9]),             // duration
+                            p[7],                               // description
+                            (Integer.parseInt(p[8]) == 1),      // canceled
+                            p[13],                              // location
+                            Integer.parseInt(p[10]),            // priority
+                            Double.parseDouble(p[15])           // revenue
+                        );
+                    } else {
+                        task = new Task(
+                            p[0],                               // id
+                            Integer.parseInt(p[1]),             // day
+                            Integer.parseInt(p[2]),             // month
+                            Integer.parseInt(p[3]),             // year
+                            Integer.parseInt(p[4]),             // hour
+                            Integer.parseInt(p[5]),             // minute
+                            p[6],                               // title
+                            Integer.parseInt(p[9]),             // duration
+                            p[7],                               // description
+                            (Integer.parseInt(p[8]) == 1),      // canceled
+                            p[13],                              // location
+                            Integer.parseInt(p[10]),            // priority
+                            p[12],                              // partner
+                            p[11],                              // email
+                            p[14],                              // meetingType
+                            Double.parseDouble(p[15])           // revenue
+                        );
+                    }
+
                     tasks[count] = task;
                     count++;
                 } catch (Exception e) {
@@ -100,3 +141,4 @@ public class ManagerFile {
         }
     }
 }
+

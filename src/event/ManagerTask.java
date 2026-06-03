@@ -11,7 +11,6 @@ public class ManagerTask {
 
     private int front, rear, size;
     
-    // khởi tạo queue
     public ManagerTask(){
         tasks = new Task[Max_event];
         queue = new int[Max_event];
@@ -50,8 +49,6 @@ public class ManagerTask {
                 if(!sc.nextLine().equalsIgnoreCase("y")){
                     return false;
                 }
-
-                sc.close();
                 break;
             }
         }
