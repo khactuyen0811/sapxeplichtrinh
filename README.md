@@ -1,3 +1,1 @@
-. 
-đã xong 
-chưa xong
+
